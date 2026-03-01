@@ -1,0 +1,29 @@
+# Rust
+/target/
+Cargo.lock
+
+# macOS
+.DS_Store
+._*
+.AppleDouble
+.LSOverride
+
+# Editor
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+
+# Logs
+*.log
+
+# Runtime / temp
+/tmp/
+
+# Config (user-specific)
+.zq/
+
+# Personal notes / AI config
+Docs/
+CLAUDE.md
