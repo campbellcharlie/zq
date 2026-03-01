@@ -1,4 +1,4 @@
-# zq
+# Zinq
 
 A macOS system proxy that monitors all application network traffic in real time, with selective routing to an HTTP proxy (Burp Suite, mitmproxy, Charles, etc.) for deeper investigation.
 
