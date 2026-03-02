@@ -10,8 +10,6 @@ use std::path::PathBuf;
 pub struct Config {
     /// Address of the upstream HTTP proxy (e.g. Burp Suite, mitmproxy).
     pub proxy_addr: String,
-    /// Network interface for pf route-to rules.
-    pub interface: String,
     /// Local port the transparent proxy listens on.
     pub proxy_port: u16,
     /// Unix socket path for daemon ↔ TUI communication.
@@ -22,7 +20,6 @@ impl Default for Config {
     fn default() -> Self {
         Self {
             proxy_addr: "127.0.0.1:8080".to_string(),
-            interface: "en0".to_string(),
             proxy_port: 8888,
             socket_path: "/tmp/zq-tui.sock".to_string(),
         }
@@ -75,7 +72,6 @@ impl Config {
 
             match key {
                 "proxy_addr" => config.proxy_addr = value.to_string(),
-                "interface" => config.interface = value.to_string(),
                 "proxy_port" => {
                     if let Ok(port) = value.parse::<u16>() {
                         config.proxy_port = port;
@@ -100,7 +96,6 @@ fn config_path() -> Option<PathBuf> {
 const DEFAULT_CONFIG: &str = "\
 # zq configuration
 proxy_addr = 127.0.0.1:8080
-interface = en0
 proxy_port = 8888
 # socket_path = /tmp/zq-tui.sock
 ";
@@ -117,19 +112,16 @@ mod tests {
     fn test_defaults() {
         let config = Config::default();
         assert_eq!(config.proxy_addr, "127.0.0.1:8080");
-        assert_eq!(config.interface, "en0");
         assert_eq!(config.proxy_port, 8888);
         assert_eq!(config.socket_path, "/tmp/zq-tui.sock");
     }
 
     #[test]
     fn test_parse_basic() {
-        let input = "proxy_addr = 10.0.0.1:9090\ninterface = en1\nproxy_port = 9999\n";
+        let input = "proxy_addr = 10.0.0.1:9090\nproxy_port = 9999\n";
         let config = Config::parse(input);
         assert_eq!(config.proxy_addr, "10.0.0.1:9090");
-        assert_eq!(config.interface, "en1");
         assert_eq!(config.proxy_port, 9999);
-        // socket_path should remain default
         assert_eq!(config.socket_path, "/tmp/zq-tui.sock");
     }
 
@@ -140,12 +132,11 @@ mod tests {
 proxy_addr = 1.2.3.4:5555
 
 # Another comment
-interface = en2
+proxy_port = 7777
 ";
         let config = Config::parse(input);
         assert_eq!(config.proxy_addr, "1.2.3.4:5555");
-        assert_eq!(config.interface, "en2");
-        assert_eq!(config.proxy_port, 8888); // default
+        assert_eq!(config.proxy_port, 7777);
     }
 
     #[test]
@@ -173,7 +164,6 @@ interface = en2
     fn test_parse_empty_input() {
         let config = Config::parse("");
         assert_eq!(config.proxy_addr, "127.0.0.1:8080");
-        assert_eq!(config.interface, "en0");
         assert_eq!(config.proxy_port, 8888);
     }
 }

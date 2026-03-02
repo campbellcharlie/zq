@@ -68,7 +68,6 @@ async fn main() -> Result<()> {
     let config = Config::load();
     info!(
         proxy_addr = %config.proxy_addr,
-        interface = %config.interface,
         proxy_port = config.proxy_port,
         socket_path = %config.socket_path,
         "zq-daemon starting"
@@ -81,7 +80,7 @@ async fn main() -> Result<()> {
 
     // Auto-load pf rules on daemon startup.
     let uid = unsafe { libc::getuid() };
-    if let Err(e) = pf::load_rules(config.proxy_port, uid, &config.interface) {
+    if let Err(e) = pf::load_rules(config.proxy_port, uid) {
         warn!("failed to load pf rules: {e}");
         warn!("traffic interception may not work — run `zq-daemon setup` manually");
     }

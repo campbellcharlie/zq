@@ -78,7 +78,6 @@ Config lives at `~/.zq/config`. Created with defaults on first run.
 ```
 # zq configuration
 proxy_addr = 127.0.0.1:8080     # upstream proxy address
-interface = en0                  # network interface for pf rules
 proxy_port = 8888                # local transparent proxy port
 # socket_path = /tmp/zq-tui.sock
 ```
@@ -86,7 +85,6 @@ proxy_port = 8888                # local transparent proxy port
 | Key | Default | Description |
 |-----|---------|-------------|
 | `proxy_addr` | `127.0.0.1:8080` | Address of the upstream HTTP proxy |
-| `interface` | `en0` | Network interface for pf route-to rules |
 | `proxy_port` | `8888` | Port the transparent proxy listens on |
 | `socket_path` | `/tmp/zq-tui.sock` | Unix socket for daemon/TUI IPC |
 

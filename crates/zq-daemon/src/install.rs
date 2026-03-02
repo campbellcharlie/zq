@@ -13,10 +13,10 @@ pub fn run_setup() -> Result<()> {
     let config = Config::load();
     let uid = unsafe { libc::getuid() };
     println!(
-        "Loading pf rules (proxy port {}, interface {}, excluded uid {uid})...",
-        config.proxy_port, config.interface
+        "Loading pf rules (proxy port {}, excluded uid {uid})...",
+        config.proxy_port
     );
-    pf::load_rules(config.proxy_port, uid, &config.interface)?;
+    pf::load_rules(config.proxy_port, uid)?;
     println!("Done. PF anchor 'zq' is active.");
     println!();
     println!("Verify with: sudo pfctl -a zq -sr");

@@ -214,10 +214,10 @@ impl Drop for PfDevice {
 ///
 /// The `excluded_uid` prevents the daemon's own upstream connections from
 /// being re-redirected (loop avoidance).
-pub fn load_rules(port: u16, excluded_uid: u32, interface: &str) -> Result<()> {
+pub fn load_rules(port: u16, excluded_uid: u32) -> Result<()> {
     use std::io::Write;
 
-    info!("loading pf rules into anchor 'zq' (proxy port {port}, excluded uid {excluded_uid}, interface {interface})");
+    info!("loading pf rules into anchor 'zq' (proxy port {port}, excluded uid {excluded_uid})");
 
     // Step 1: Add anchor references to the main ruleset.
     // Read /etc/pf.conf and insert our anchor refs in the correct order
@@ -279,7 +279,7 @@ pub fn load_rules(port: u16, excluded_uid: u32, interface: &str) -> Result<()> {
     // Step 2: Load rules into the zq anchor.
     let anchor_rules = format!(
         "rdr pass on lo0 proto tcp from any to !127.0.0.1 port {{80, 443}} -> 127.0.0.1 port {port}\n\
-         pass out on {interface} route-to (lo0 127.0.0.1) proto tcp from any to any port {{80, 443}} keep state user != {excluded_uid}\n"
+         pass out route-to (lo0 127.0.0.1) proto tcp from any to any port {{80, 443}} keep state user != {excluded_uid}\n"
     );
 
     debug!("anchor rules:\n{anchor_rules}");
