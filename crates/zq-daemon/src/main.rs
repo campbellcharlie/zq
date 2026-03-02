@@ -120,6 +120,19 @@ async fn main() -> Result<()> {
         })
     };
 
+    // Start pf anchor watchdog — re-injects anchor references if something
+    // (e.g. a VPN client) reloads the main pf ruleset without them.
+    let pf_watchdog_handle = tokio::spawn(async move {
+        let mut interval = tokio::time::interval(std::time::Duration::from_secs(5));
+        interval.tick().await; // skip immediate first tick
+        loop {
+            interval.tick().await;
+            if let Err(e) = pf::ensure_anchors() {
+                warn!("pf watchdog: failed to restore anchors: {e}");
+            }
+        }
+    });
+
     // Wait for shutdown signal (Ctrl-C or TUI shutdown command).
     tokio::select! {
         _ = signal::ctrl_c() => {
@@ -140,6 +153,7 @@ async fn main() -> Result<()> {
     proxy_handle.abort();
     tui_handle.abort();
     health_handle.abort();
+    pf_watchdog_handle.abort();
 
     // Clean up socket files.
     let _ = std::fs::remove_file(&config.socket_path);

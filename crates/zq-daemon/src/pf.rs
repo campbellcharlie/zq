@@ -380,3 +380,99 @@ pub fn is_loaded() -> bool {
         Err(_) => false,
     }
 }
+
+/// Check whether the main pf ruleset still references our `zq` anchor.
+/// Returns `true` if both `rdr-anchor "zq"` and `anchor "zq"` are present.
+pub fn anchors_referenced() -> bool {
+    // Check filter rules for anchor "zq"
+    let sr = Command::new("pfctl")
+        .args(["-sr"])
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::piped())
+        .output();
+
+    let has_anchor = match &sr {
+        Ok(out) => {
+            let stdout = String::from_utf8_lossy(&out.stdout);
+            stdout.lines().any(|l| l.contains("anchor") && l.contains("zq"))
+        }
+        Err(_) => false,
+    };
+
+    // Check NAT/rdr rules for rdr-anchor "zq"
+    let sn = Command::new("pfctl")
+        .args(["-sn"])
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::piped())
+        .output();
+
+    let has_rdr = match &sn {
+        Ok(out) => {
+            let stdout = String::from_utf8_lossy(&out.stdout);
+            stdout.lines().any(|l| l.contains("rdr-anchor") && l.contains("zq"))
+        }
+        Err(_) => false,
+    };
+
+    has_anchor && has_rdr
+}
+
+/// Re-inject anchor references into the main ruleset if they were removed
+/// (e.g. by a VPN client reloading pf). Only touches the main ruleset,
+/// not the anchor rules themselves (those persist independently).
+pub fn ensure_anchors() -> Result<()> {
+    if anchors_referenced() {
+        return Ok(());
+    }
+
+    info!("pf anchor references missing from main ruleset — re-injecting");
+
+    let base_conf =
+        std::fs::read_to_string("/etc/pf.conf").context("failed to read /etc/pf.conf")?;
+
+    let mut main_conf = String::new();
+    let mut inserted_rdr = false;
+    let mut inserted_anchor = false;
+
+    for line in base_conf.lines() {
+        main_conf.push_str(line);
+        main_conf.push('\n');
+
+        if line.trim().starts_with("rdr-anchor") && !inserted_rdr {
+            main_conf.push_str("rdr-anchor \"zq\"\n");
+            inserted_rdr = true;
+        }
+
+        if line.trim().starts_with("anchor ") && !inserted_anchor {
+            main_conf.push_str("anchor \"zq\"\n");
+            inserted_anchor = true;
+        }
+    }
+
+    if !inserted_rdr {
+        main_conf.push_str("rdr-anchor \"zq\"\n");
+    }
+    if !inserted_anchor {
+        main_conf.push_str("anchor \"zq\"\n");
+    }
+
+    let tmp_conf = "/tmp/zq-pf.conf";
+    std::fs::write(tmp_conf, &main_conf).context("failed to write temp pf config")?;
+
+    let output = Command::new("pfctl")
+        .args(["-f", tmp_conf])
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::piped())
+        .output()
+        .context("failed to run pfctl -f for main config")?;
+
+    let _ = std::fs::remove_file(tmp_conf);
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        bail!("pfctl -f {tmp_conf} failed: {stderr}");
+    }
+
+    info!("pf anchor references restored");
+    Ok(())
+}
